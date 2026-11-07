@@ -7,6 +7,8 @@
 - [SMACK Stack is](#smack-stack-is)
 - [Roles of Products](#roles-of-products)
 - [Components of Apache Spark](#components-of-apache-spark)
+- [From Spark to Cassandra （Spark Streaming）](#from-spark-to-cassandra-spark-streaming)
+- [From Cassandra to Spark （Spark SQL）](#from-cassandra-to-spark-spark-sql)
 - [Step 1: Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
   - [Start Cassandra and Spark Containers](#start-cassandra-and-spark-containers)
   - [Copy resources to Containers](#copy-resources-to-containers)
@@ -14,6 +16,10 @@
   - [Verify the connection from Spark](#verify-the-connection-from-spark)
   - [Start the simulation](#start-the-simulation)
   - [Verify Cassandra](#verify-cassandra)
+- [Step 2: Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
+  - [Create Aggregated Table](#create-aggregated-table)
+  - [Run the Aggregation Script](#run-the-aggregation-script)
+  - [Verify Cassandra](#verify-cassandra-1)
 
 ## Overview
 
@@ -55,6 +61,14 @@ Cassandra と Apache Spark を組み合わせて、Spark Streaming(Structured St
 
 - Spark → Cassandra = Spark Streaming でリアルタイムにデータを処理し、Cassandra に書き込むパターンです。
 - Cassandra → Spark = Spark SQL で Cassandra に貯まった大量のデータを Spark で読み込み、分析・加工するパターンです。Cassandra は DataFrame として直接扱うことができます。
+
+## From Spark to Cassandra （Spark Streaming）
+
+Cassandraは「大量のデータを高速に書き込む・蓄積する」のが非常に得意なため、Sparkでリアルタイム処理（Spark Streaming）した結果の吐き出し先としてよく使われます。
+
+## From Cassandra to Spark （Spark SQL）
+
+Cassandra単体では、複雑な条件での集計や結合（JOIN）、全件を舐めるような分析が苦手です。そこにSparkを組み合わせることで、「Cassandraに貯めて、Sparkで分析する」という強力な分業体制が作れます。
 
 ## Step 1: Real-time log accumulation system for pseudo IoT sensors
 
@@ -216,11 +230,59 @@ docker exec -it cassandra cqlsh -k iot_keyspace
 ```
 
 ```sql
-cqlsh:iot_keyspace> select * from sensor_logs;
+cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
 
  sensor_id | status  | temperature | timestamp
 -----------+---------+-------------+---------------------------------
   sensor_2 | WARNING |    21.58791 | 2026-11-07 09:18:07.895000+0000
   sensor_1 |      OK |    21.71743 | 2026-11-07 09:18:09.895000+0000
   sensor_0 |      OK |    27.36492 | 2026-11-07 09:18:08.895000+0000
+```
+
+## Step 2: Perform more advanced aggregation
+
+> window 関数を使い、「1分間の枠（固定ウィンドウ）」でグループ化して平均値を計算します。
+
+### Create Aggregated Table
+
+Cassandra に接続して、キースペースとテーブルを作成します。
+
+> コンテナ起動時に自動的に作成する設定はありませんでした。
+
+- [See `002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
+
+```bash
+docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggregated.cql
+```
+
+### Run the Aggregation Script
+
+- [`step-2/app.py`](../docker/spark/step-2/app.py)
+
+```bash
+docker exec -it -u root spark /opt/spark/bin/spark-submit \
+  --master "local[1]" \
+  --driver-memory 512m \
+  --conf spark.sql.shuffle.partitions=2 \
+  --conf spark.cassandra.connection.host=cassandra \
+  --packages com.datastax.spark:spark-cassandra-connector_2.12:3.5.1 \
+  /workspaces/spark/step-2/app_agg.py
+```
+
+### Verify Cassandra
+
+```bash
+docker exec -it cassandra cqlsh -k iot_keyspace
+```
+
+```sql
+cqlsh:iot_keyspace> SELECT * FROM sensor_averages WHERE sensor_id = 'sensor_1' ORDER BY window_start DESC LIMIT 5;
+
+ sensor_id | window_start                    | avg_temperature | window_end
+-----------+---------------------------------+-----------------+---------------------------------
+  sensor_1 | 2026-11-07 13:27:00.000000+0000 |        26.06393 | 2026-11-07 13:28:00.000000+0000
+  sensor_1 | 2026-11-07 13:26:00.000000+0000 |        24.74708 | 2026-11-07 13:27:00.000000+0000
+  sensor_1 | 2026-11-07 13:25:00.000000+0000 |        25.38283 | 2026-11-07 13:26:00.000000+0000
+  sensor_1 | 2026-11-07 13:24:00.000000+0000 |        24.88053 | 2026-11-07 13:25:00.000000+0000
+  sensor_1 | 2026-11-07 13:23:00.000000+0000 |        25.29752 | 2026-11-07 13:24:00.000000+0000
 ```
