@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+  "name": "SMACK Stack",
+  "dockerComposeFile": [
+    "compose.dev.yaml"
+  ],
+  "service": "dev",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "/bin/sh ./.devcontainer/postCreateCommand.sh",
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "UV_LINK_MODE": "copy"
+  },
+  "mounts": [
+    "source=uv-venv,target=${containerWorkspaceFolder}/.venv,type=volume"
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/node:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "streetsidesoftware.code-spell-checker",
+        "DavidAnson.vscode-markdownlint",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "files.associations": {
+          "*.cql": "sql"
+        }
+      }
+    }
+  }
+}

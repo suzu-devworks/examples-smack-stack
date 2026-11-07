@@ -1,0 +1,13 @@
+[project]
+name = "examples-smack-stack"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.15"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pyclean>=3.7.0",
+    "ruff>=0.17.4",
+]

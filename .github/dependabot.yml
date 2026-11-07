@@ -1,0 +1,31 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for more information:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://containers.dev/guide/dependabot
+
+version: 2
+updates:
+  # 1. Devcontainers
+  - package-ecosystem: 'devcontainers'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 0
+    groups:
+      devcontainers-security:
+        applies-to: 'security-updates'
+        patterns:
+          - '*'
+
+  # 4. Python (uv / pip)
+  - package-ecosystem: 'pip'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 0
+    groups:
+      pip-security:
+        applies-to: 'security-updates'
+        patterns:
+          - '*'

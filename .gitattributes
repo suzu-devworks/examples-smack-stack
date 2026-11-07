@@ -1,0 +1,15 @@
+# .gitattributes
+
+# make sure everyone has the same behavior for all files
+* text=auto
+
+# for docker configuration
+*.conf text eol=lf
+
+# for graphics
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.svg     binary

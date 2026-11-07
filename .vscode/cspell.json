@@ -1,0 +1,31 @@
+{
+  "version": "0.2",
+  "ignorePaths": [
+    ".git/",
+    ".devcontainer/",
+    ".config/",
+    ".github/",
+    ".vscode/",
+    ".editorconfig",
+    ".gitignore",
+    ".*",
+    "**/*.lock",
+    "**/*.ini",
+    "**/*.toml"
+  ],
+  "dictionaryDefinitions": [],
+  "dictionaries": [],
+  "words": [
+    "Akka",
+    "cqlsh",
+    "datastax",
+    "healthcheck",
+    "KEYSPACE",
+    "Mesos",
+    "NEWSIZE",
+    "pyspark",
+    "venv"
+  ],
+  "ignoreWords": [],
+  "import": []
+}
