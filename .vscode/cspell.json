@@ -19,10 +19,13 @@
     "Akka",
     "cqlsh",
     "datastax",
+    "DGRAM",
+    "Embulk",
     "healthcheck",
     "KEYSPACE",
     "Mesos",
     "NEWSIZE",
+    "pyproject",
     "pyspark",
     "venv"
   ],
