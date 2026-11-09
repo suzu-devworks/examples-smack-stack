@@ -10,7 +10,8 @@
   "postCreateCommand": "/bin/sh ./.devcontainer/postCreateCommand.sh",
   "remoteUser": "vscode",
   "remoteEnv": {
-    "UV_LINK_MODE": "copy"
+    "UV_LINK_MODE": "copy",
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
   "mounts": [
     "source=uv-venv,target=${containerWorkspaceFolder}/.venv,type=volume"

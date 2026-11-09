@@ -21,6 +21,7 @@
     "datastax",
     "DGRAM",
     "Embulk",
+    "errback",
     "healthcheck",
     "KEYSPACE",
     "Mesos",

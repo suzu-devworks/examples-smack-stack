@@ -13,21 +13,18 @@
 - [Apache Kafka](#apache-kafka)
 - [Step 1: Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
   - [Start Cassandra and Spark Containers for Step 1](#start-cassandra-and-spark-containers-for-step-1)
-  - [Copy resources to Containers](#copy-resources-to-containers)
   - [Create Cassandra Keyspaces and Table](#create-cassandra-keyspaces-and-table)
   - [Verify the connection from Spark](#verify-the-connection-from-spark)
   - [Start Spark Script (simulation)](#start-spark-script-simulation)
   - [Verify Cassandra](#verify-cassandra)
 - [Step 2: Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
   - [Start Cassandra and Spark Containers for Step 2](#start-cassandra-and-spark-containers-for-step-2)
-  - [Copy resources to Containers](#copy-resources-to-containers-1)
   - [Create Aggregated Table](#create-aggregated-table)
   - [Start Spark Script (aggregator)](#start-spark-script-aggregator)
   - [Verify Cassandra](#verify-cassandra-1)
 - [Step 3　　Incorporate Kafka as a buffer for IoT data ingestion](#step-3incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
   - [Start Cassandra and Spark Containers for Step 3](#start-cassandra-and-spark-containers-for-step-3)
-  - [Copy resources to Containers](#copy-resources-to-containers-2)
-  - [Create Table](#create-table)
+  - [Create Aggregated Table](#create-aggregated-table-1)
   - [Connect the devcontainer to the interconnect network](#connect-the-devcontainer-to-the-interconnect-network)
   - [Start Repeater](#start-repeater)
   - [Start Spark Script (production)](#start-spark-script-production)
@@ -44,7 +41,7 @@ Cassandra と Apache Spark を組み合わせて、Spark Streaming(Structured St
 
 ## Environments
 
-- 2026-11-07: on Docker
+- 2026-11-07: on Docker outside of docker
   - Cassandra: 5.0.9 (cassandra:latest)
   - Apache Spark: 3.1.9, Scala 2.12, Python 3.10.12 (spark:3.5.9-python3) ※
   - Apache Kafka: 4.3.1 (apache/kafka:latest)
@@ -103,11 +100,20 @@ Cassandra単体では、複雑な条件での集計や結合（JOIN）、全件�
 
 > 擬似的な IoT センサーからのログをリアルタイムに蓄積するシステムを構築するケースを考えます。
 
-//TODO あとで図を入れる
+```mermaid
+architecture-beta
+    group backend(cloud)[Data Infrastructure]
+        service device(server)[rate(Spark)] in backend
+        service spark(server)[Spark] in backend
+        service cassandra(database)[Cassandra] in backend
+    
+    device:R --> L:spark
+    spark:B --> T:cassandra
+```
 
 ### Start Cassandra and Spark Containers for Step 1
 
-- [See `compose.yaml`](../compose.yaml)
+- See [`compose.yaml`](../compose.yaml)
 
 ```bash
 docker compose up -d
@@ -115,33 +121,13 @@ docker compose up -d
 
 > devcontainer (dev) 内からホストの Docker を操作できる設定になっています。
 
-### Copy resources to Containers
-
-本当は 各コンテナの作業ディレクトリに直接マウントして使いたいのですが、devcontainer からはパスが違うのでエラーになります。
-
-```console
-The path /workspaces/examples-smack-stack/docker/spark is not shared from the host and is not known to Docker.
-```
-
-これ解決するのは難しそうなので、コンテナ内にコピーして使うことにします。
-
-```bash
-# copy to cassandra container
-docker exec -u root cassandra mkdir -p /workspaces/cassandra/
-docker cp ./docker/cassandra/. cassandra:/workspaces/cassandra/
-
-# copy to spark container
-docker exec -u root spark mkdir -p /workspaces/spark/
-docker cp ./docker/spark/. spark:/workspaces/spark/
-```
-
 ### Create Cassandra Keyspaces and Table
 
 Cassandra に接続して、キースペースとテーブルを作成します。
 
 > コンテナ起動時に自動的に作成する設定はありませんでした。
 
-- [See `001_iot_keyspace.cql`](../docker/cassandra/scripts/001_iot_keyspace.cql)
+- See [`cassandra/scripts/001_iot_keyspace.cql`](../docker/cassandra/scripts/001_iot_keyspace.cql)
 
 ```bash
 docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/001_iot_keyspace.cql
@@ -236,7 +222,7 @@ df.show()
 
 ### Start Spark Script (simulation)
 
-- [`step-1/app.py`](../docker/spark/step-1/app.py)
+- See [`spark/step-1/app.py`](../docker/spark/step-1/app.py)
 
 ```bash
 docker exec -it -u root spark /opt/spark/bin/spark-submit \
@@ -280,23 +266,11 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
 docker compose up -d
 ```
 
-### Copy resources to Containers
-
-```bash
-# copy to cassandra container
-docker exec -u root cassandra mkdir -p /workspaces/cassandra/
-docker cp ./docker/cassandra/. cassandra:/workspaces/cassandra/
-
-# copy to spark container
-docker exec -u root spark mkdir -p /workspaces/spark/
-docker cp ./docker/spark/. spark:/workspaces/spark/
-```
-
 ### Create Aggregated Table
 
 Cassandra に接続して、キースペースとテーブルを作成します。
 
-- [See `002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
+- See [`cassandra/scripts/002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
 
 ```bash
 docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggregated.cql
@@ -304,7 +278,7 @@ docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggrega
 
 ### Start Spark Script (aggregator)
 
-- [`step-2/app.py`](../docker/spark/step-2/app.py)
+- [`spark/step-2/app.py`](../docker/spark/step-2/app.py)
 
 ```bash
 docker exec -it -u root spark /opt/spark/bin/spark-submit \
@@ -323,61 +297,56 @@ docker exec -it cassandra cqlsh -k iot_keyspace
 ```
 
 ```sql
-cqlsh:iot_keyspace> SELECT * FROM sensor_averages WHERE sensor_id = 'sensor_1' ORDER BY window_start DESC LIMIT 5;
+cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
 
  sensor_id | window_start                    | avg_temperature | window_end
 -----------+---------------------------------+-----------------+---------------------------------
-  sensor_1 | 2026-11-07 13:27:00.000000+0000 |        26.06393 | 2026-11-07 13:28:00.000000+0000
-  sensor_1 | 2026-11-07 13:26:00.000000+0000 |        24.74708 | 2026-11-07 13:27:00.000000+0000
-  sensor_1 | 2026-11-07 13:25:00.000000+0000 |        25.38283 | 2026-11-07 13:26:00.000000+0000
-  sensor_1 | 2026-11-07 13:24:00.000000+0000 |        24.88053 | 2026-11-07 13:25:00.000000+0000
-  sensor_1 | 2026-11-07 13:23:00.000000+0000 |        25.29752 | 2026-11-07 13:24:00.000000+0000
+  sensor_2 | 2026-11-09 05:25:00.000000+0000 |        25.84015 | 2026-11-09 05:26:00.000000+0000
+  sensor_2 | 2026-11-09 05:26:00.000000+0000 |        24.81404 | 2026-11-09 05:27:00.000000+0000
+  sensor_1 | 2026-11-09 05:25:00.000000+0000 |        25.03175 | 2026-11-09 05:26:00.000000+0000
+  sensor_1 | 2026-11-09 05:26:00.000000+0000 |        24.33107 | 2026-11-09 05:27:00.000000+0000
+  sensor_0 | 2026-11-09 05:25:00.000000+0000 |        26.02362 | 2026-11-09 05:26:00.000000+0000
+  sensor_0 | 2026-11-09 05:26:00.000000+0000 |        25.70184 | 2026-11-09 05:27:00.000000+0000
 ```
 
 ## Step 3　　Incorporate Kafka as a buffer for IoT data ingestion
 
 > IoTデータ取り込みのバッファとしてKafkaを組み込む
 
-//TODO あとで絵を描く
+```mermaid
+architecture-beta
+    group iot(cloud)[IoT]
+        service device(server)[Device] in iot
 
-[IoTデバイス] --(UDP/CoAP)--> [ゲートウェイ / 受信サーバー] --(書き込み)--> [Apache Kafka] --(ストリーム)--> [Spark Streaming] --> [Cassandra]
+    group gw(server)[DMZ/Gateway]
+        service repeater(server)[Repeater] in gw
 
+    group backend(cloud)[Data Infrastructure]
+        service kafka(server)[Kafka] in backend
+        service spark(server)[Spark] in backend
+        service cassandra(database)[Cassandra] in backend
+    
+    device:R --> L:repeater
+    repeater:R --> L:kafka
+    kafka:R --> L:spark
+    spark:B --> T:cassandra
+```
+  
 一連のパイプラインをローカル環境で動かすための設定手順とPythonコードをまとめました。
 
 ### Start Cassandra and Spark Containers for Step 3
 
-[現場のIoTデバイス]
-       │ (インターネット / VPN / 閉域網)
-       ▼
-[DMZ / ゲートウェイ層]  ◀── ★ 中継機（Bridge）はここ！（Kafkaの外側）
-       │ (外部公開用リスナー: EXTERNAL)
-       ▼
-[データ基盤・内部ネットワーク]
-  ├── [Kafka クラスター] ◀── 内部通信は INTERNAL（ブローカー同士・Spark用）
-  ├── [Spark クラスター]
-  └── [Cassandra クラスター]
-  
 - [See `compose.yaml`](../compose.yaml)
 
 ```bash
 docker compose up -d
 ```
 
-### Copy resources to Containers
+### Create Aggregated Table
 
-```bash
-# copy to cassandra container
-docker exec -u root cassandra mkdir -p /workspaces/cassandra/
-docker cp ./docker/cassandra/. cassandra:/workspaces/cassandra/
+Step 2と同じテーブルなので作成済みであればスキップして構いません。
 
-# copy to spark container
-docker exec -u root spark mkdir -p /workspaces/spark/
-docker cp ./docker/spark/. spark:/workspaces/spark/
-```
-
-### Create Table
-
-- [See `002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
+- See [`cassandra/scripts/002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
 
 ```bash
 docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggregated.cql
@@ -400,28 +369,23 @@ docker network connect examples-smack-bridge examples-smack-stack_devcontainer-d
 
 - [See `repeater/bridge.py`](../docker/repeater/bridge.py)
 
-まずは devcontainer に依存関係をインストールします。
-本来は `confluent-kafka` を使うところですがC言語のヘッダファイルが必要になるため、今回は `kafka-python-ng` を使います。
+repeater専用のコンテナを用意しているので次を実行します。
 
 ```bash
-uv add kafka-python-ng
-```
-
-> `pyproject.toml` に依存関係を追加ずみなので、`uv sync` を実行して依存関係を同期してください。
-
-中継機実行します。
-
-```bash
-uv run ./docker/repeater/bridge.py 
+docker exec -it repeater uv run /workspaces/repeater/bridge.py 
 ```
 
 ```console
 UDP Bridge started. Listening on port 5005...
 ```
 
+> [!NOTE]
+> Kafkaとの接続用に `confluent-kafka` を使用していますが、インストールの際にC言語のヘッダファイルが必要になることがあります。
+> 環境によって用意できない場合には `kafka-python-ng` でも接続できます。その際には `bridge-slim.py` を参照してください。
+
 ### Start Spark Script (production)
 
-- [`step-2/app.py`](../docker/spark/step-2/app.py)
+- [`spark/step-3/app_kafka.py`](../docker/spark/step-3/app_kafka.py)
 
 ```bash
 docker exec -it -u root spark /opt/spark/bin/spark-submit \
@@ -447,7 +411,7 @@ docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh \
 ### Launch a simulated IoT device
 
 ```bash
- uv run ./docker/iot/device_sim.py 
+ uv run ./docker/iot/device_sim.py --host repeater
 ```
 
 ### Verify Cassandra
@@ -463,10 +427,10 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
 
  sensor_id | window_start                    | avg_temperature | window_end
 -----------+---------------------------------+-----------------+---------------------------------
-  sensor_2 | 2026-11-08 09:39:00.000000+0000 |          28.995 | 2026-11-08 09:40:00.000000+0000
-  sensor_2 | 2026-11-08 09:40:00.000000+0000 |        25.78842 | 2026-11-08 09:41:00.000000+0000
-  sensor_1 | 2026-11-08 09:39:00.000000+0000 |           21.83 | 2026-11-08 09:40:00.000000+0000
-  sensor_1 | 2026-11-08 09:40:00.000000+0000 |        23.93562 | 2026-11-08 09:41:00.000000+0000
-  sensor_0 | 2026-11-08 09:39:00.000000+0000 |          20.465 | 2026-11-08 09:40:00.000000+0000
-  sensor_0 | 2026-11-08 09:40:00.000000+0000 |        23.81455 | 2026-11-08 09:41:00.000000+0000
+  sensor_2 | 2026-11-09 07:35:00.000000+0000 |         25.1381 | 2026-11-09 07:36:00.000000+0000
+  sensor_2 | 2026-11-09 07:36:00.000000+0000 |           23.74 | 2026-11-09 07:37:00.000000+0000
+  sensor_1 | 2026-11-09 07:35:00.000000+0000 |        25.39706 | 2026-11-09 07:36:00.000000+0000
+  sensor_1 | 2026-11-09 07:36:00.000000+0000 |           28.87 | 2026-11-09 07:37:00.000000+0000
+  sensor_0 | 2026-11-09 07:35:00.000000+0000 |        25.65905 | 2026-11-09 07:36:00.000000+0000
+  sensor_0 | 2026-11-09 07:36:00.000000+0000 |           20.74 | 2026-11-09 07:37:00.000000+0000
 ```

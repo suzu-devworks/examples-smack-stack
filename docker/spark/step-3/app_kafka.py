@@ -55,7 +55,7 @@ def write_to_cassandra(batch_df: DataFrame, batch_id: int) -> None:
 query = (
     aggregated_stream.writeStream.foreachBatch(write_to_cassandra)
     .outputMode("update")
-    .option("checkpointLocation", "/workspaces/spark/step-3/checkpoint_kafka")
+    .option("checkpointLocation", "./checkpoint_kafka")
     .start()
 )
 

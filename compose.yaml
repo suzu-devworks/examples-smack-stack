@@ -12,12 +12,13 @@ services:
       - HEAP_NEWSIZE=100M
     volumes:
       - cassandra-data:/var/lib/cassandra
+      - ${LOCAL_WORKSPACE_FOLDER}/docker/cassandra:/workspaces/cassandra:ro
     healthcheck:
       test: [ 'CMD', 'cqlsh', '-e', 'describe cluster' ]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 120s # スタートが遅いので長めに設定
     deploy:
       resources:
         limits:
@@ -35,6 +36,8 @@ services:
     environment:
       - SPARK_DRIVER_MEMORY=512m
       - SPARK_EXECUTOR_MEMORY=512m
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER}/docker/spark:/workspaces/spark:ro
     depends_on:
       cassandra:
         condition: service_healthy
@@ -49,7 +52,7 @@ services:
     networks:
       - interconnect
     ports:
-      - "9092:9092"
+      - '9092:9092'
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -62,7 +65,7 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
-      KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"
+      KAFKA_HEAP_OPTS: '-Xmx512M -Xms256M'
       # シングルノード（1台構成）必須設定（デフォルト3台構成
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -71,6 +74,19 @@ services:
       resources:
         limits:
           memory: 800M
+
+  repeater:
+    image: examples-smack-stack/repeater
+    build:
+      context: ./docker/repeater/
+    container_name: repeater
+    networks:
+      - interconnect
+    ports:
+      - '5005:5005'
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER}/docker/repeater:/workspaces/repeater:ro
+    command: tail -f /dev/null
 
 volumes:
   cassandra-data:

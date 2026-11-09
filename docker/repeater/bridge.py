@@ -1,13 +1,35 @@
 import socket
+from mailbox import Message
 
-from kafka import KafkaProducer
+from confluent_kafka import Producer  # type: ignore
+from kafka.errors import KafkaError
+
+
+def delivery_report(err: KafkaError, msg: Message) -> None:
+    if err is not None:
+        print(f"❌ Send Failed: {err}")
+    else:
+        # 📌 ここで完了メッセージを出します
+        print(f"✅ Sent to Kafka -> Topic: {msg.topic()}, Partition: {msg.partition()}, Offset: {msg.offset()}")
+
 
 # Kafkaの設定
-producer = KafkaProducer(bootstrap_servers=["kafka:9092"], request_timeout_ms=5000, max_block_ms=5000)
+producer_config = {
+    "bootstrap.servers": "kafka:9092",
+    # 1. ブローカーからの応答待ちタイムアウト (例: 5秒)
+    "request.timeout.ms": 5000,
+    # 2. メッセージ送信全体のタイムアウト。リトライも含めた上限 (例: 10秒)
+    "message.timeout.ms": 10000,
+    # 3. ネットワーク接続自体のタイムアウト (例: 10秒)
+    "socket.timeout.ms": 10000,
+    # 必要に応じてリトライ回数なども設定可能
+    "retries": 3,
+}
+producer = Producer(producer_config)
 
 topic_name = "iot-topic"
 
-# UDPソケットの設定
+# UDPソケットの設定 (ポート 5005番で待ち受け)
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -16,14 +38,13 @@ sock.bind((UDP_IP, UDP_PORT))
 print(f"UDP Bridge started. Listening on port {UDP_PORT}...")
 
 while True:
+    # UDPデータの受信 (例: "sensor_1,25.4" のようなCSV形式のテキスト)
     data, addr = sock.recvfrom(1024)
     message = data.decode("utf-8").strip()
-    print(f"Received UDP: {message}")
+    print(f"📥 Received UDP from {addr}: {message}")
 
-    # Kafkaへ送信（バイト列で渡す）
-    # producer.send(topic_name, value=message.encode("utf-8"))
-    # bridge.py の送信部分をこれに差し替え
-    future = producer.send(topic_name, value=message.encode("utf-8"))
-    record_metadata = future.get(timeout=5)  # 送信完了を待ち、失敗したら例外を出す
-    print(f"Sent to Kafka -> topic:{record_metadata.topic}, offset:{record_metadata.offset}")
-    # producer.flush()
+    # 受信したデータをそのままKafkaのトピックに送信
+    producer.produce(topic_name, value=message, on_delivery=delivery_report)
+
+    # 毎回 poll(0) を呼ぶことで、裏で完了したメッセージの delivery_report を実行させる
+    producer.poll(0)

@@ -21,5 +21,5 @@ while True:
     message = f"{sensor_id},{temp},{event_time}"
 
     sock.sendto(message.encode("utf-8"), (args.host, args.port))
-    print(f"Sent UDP: {message}")
+    print(f"📤 Sent UDP: {message}")
     time.sleep(1)
