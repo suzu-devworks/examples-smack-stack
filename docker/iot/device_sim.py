@@ -9,8 +9,6 @@ parser.add_argument("--host", default="127.0.0.1", help="Target UDP host (defaul
 parser.add_argument("--port", type=int, default=5005, help="Target UDP port (default: 5005)")
 args = parser.parse_args()
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 print(f"Device simulator sending UDP to {args.host}:{args.port}...")
 

@@ -83,7 +83,7 @@ services:
     networks:
       - interconnect
     ports:
-      - '5005:5005'
+      - '5005:5005/udp'
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER}/docker/repeater:/workspaces/repeater:ro
     command: tail -f /dev/null
@@ -93,5 +93,4 @@ volumes:
 
 networks:
   interconnect:
-    name: examples-smack-bridge
     driver: bridge

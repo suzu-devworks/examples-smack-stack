@@ -12,25 +12,31 @@
   - [From Cassandra to Spark （Spark SQL）](#from-cassandra-to-spark-spark-sql)
 - [Apache Kafka](#apache-kafka)
 - [Step 1: Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
-  - [Start Cassandra and Spark Containers for Step 1](#start-cassandra-and-spark-containers-for-step-1)
-  - [Create Cassandra Keyspaces and Table](#create-cassandra-keyspaces-and-table)
+  - [Start Containers for Step 1](#start-containers-for-step-1)
+  - [Create Cassandra Table　(sensor\_logs)](#create-cassandra-tablesensor_logs)
   - [Verify the connection from Spark](#verify-the-connection-from-spark)
   - [Start Spark Script (simulation)](#start-spark-script-simulation)
-  - [Verify Cassandra](#verify-cassandra)
+  - [Verify Cassandra (sensor\_logs)](#verify-cassandra-sensor_logs)
 - [Step 2: Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
-  - [Start Cassandra and Spark Containers for Step 2](#start-cassandra-and-spark-containers-for-step-2)
-  - [Create Aggregated Table](#create-aggregated-table)
+  - [Start Containers for Step 2](#start-containers-for-step-2)
+  - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages)
   - [Start Spark Script (aggregator)](#start-spark-script-aggregator)
-  - [Verify Cassandra](#verify-cassandra-1)
+  - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages)
 - [Step 3　　Incorporate Kafka as a buffer for IoT data ingestion](#step-3incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
-  - [Start Cassandra and Spark Containers for Step 3](#start-cassandra-and-spark-containers-for-step-3)
-  - [Create Aggregated Table](#create-aggregated-table-1)
-  - [Connect the devcontainer to the interconnect network](#connect-the-devcontainer-to-the-interconnect-network)
+  - [Start Containers for Step 3](#start-containers-for-step-3)
+  - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-1)
   - [Start Repeater](#start-repeater)
-  - [Start Spark Script (production)](#start-spark-script-production)
+  - [Start Spark Script (buffered by Kafka)](#start-spark-script-buffered-by-kafka)
   - [(optional) Kafka Console Consumer](#optional-kafka-console-consumer)
   - [Launch a simulated IoT device](#launch-a-simulated-iot-device)
-  - [Verify Cassandra](#verify-cassandra-2)
+  - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages-1)
+- [Step 4　Processing of delayed data](#step-4processing-of-delayed-data)
+  - [Start Cassandra and Spark Containers for Step 4](#start-cassandra-and-spark-containers-for-step-4)
+  - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-2)
+  - [Start Repeater](#start-repeater-1)
+  - [Start Spark Script (watermark)](#start-spark-script-watermark)
+  - [Run Watermark Test Script](#run-watermark-test-script)
+  - [Verify Cassandra (sensor\_averages for Watermark)](#verify-cassandra-sensor_averages-for-watermark)
 
 ## Overview
 
@@ -111,7 +117,7 @@ architecture-beta
     spark:B --> T:cassandra
 ```
 
-### Start Cassandra and Spark Containers for Step 1
+### Start Containers for Step 1
 
 - See [`compose.yaml`](../compose.yaml)
 
@@ -121,7 +127,7 @@ docker compose up -d
 
 > devcontainer (dev) 内からホストの Docker を操作できる設定になっています。
 
-### Create Cassandra Keyspaces and Table
+### Create Cassandra Table　(sensor_logs)
 
 Cassandra に接続して、キースペースとテーブルを作成します。
 
@@ -238,7 +244,9 @@ docker exec -it -u root spark /opt/spark/bin/spark-submit \
 - `--driver-memory 512m`: Sparkのメモリ上限を512MBに抑えます。
 - `--conf spark.sql.shuffle.partitions=2`: 集計時のデータ分割数（デフォルト200）を「2」に減らします。データ量が少ないテスト環境では、これを減らすだけで劇的に軽くなります。
 
-### Verify Cassandra
+### Verify Cassandra (sensor_logs)
+
+データが cassandra に流れ込んでくれば成功です。
 
 ```bash
 docker exec -it cassandra cqlsh -k iot_keyspace
@@ -258,7 +266,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
 
 > window 関数を使い、「1分間の枠（固定ウィンドウ）」でグループ化して平均値を計算します。
 
-### Start Cassandra and Spark Containers for Step 2
+### Start Containers for Step 2
 
 - See [`compose.yaml`](../compose.yaml)
 
@@ -266,7 +274,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
 docker compose up -d
 ```
 
-### Create Aggregated Table
+### Create Cassandra Table　(sensor_averages)
 
 Cassandra に接続して、キースペースとテーブルを作成します。
 
@@ -290,7 +298,9 @@ docker exec -it -u root spark /opt/spark/bin/spark-submit \
   /workspaces/spark/step-2/app_agg.py
 ```
 
-### Verify Cassandra
+### Verify Cassandra (sensor_averages)
+
+データが cassandra に流れ込んでくれば成功です。
 
 ```bash
 docker exec -it cassandra cqlsh -k iot_keyspace
@@ -334,7 +344,7 @@ architecture-beta
   
 一連のパイプラインをローカル環境で動かすための設定手順とPythonコードをまとめました。
 
-### Start Cassandra and Spark Containers for Step 3
+### Start Containers for Step 3
 
 - See [`compose.yaml`](../compose.yaml)
 
@@ -342,7 +352,7 @@ architecture-beta
 docker compose up -d
 ```
 
-### Create Aggregated Table
+### Create Cassandra Table　(sensor_averages)
 
 Step 2と同じテーブルなので作成済みであればスキップして構いません。
 
@@ -351,16 +361,6 @@ Step 2と同じテーブルなので作成済みであればスキップして�
 ```bash
 docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggregated.cql
 ```
-
-### Connect the devcontainer to the interconnect network
-
-devcontainer を compose.yaml で定義された interconnect ネットワークに接続します。
-
-```bash
-docker network connect examples-smack-bridge examples-smack-stack_devcontainer-dev-1
-```
-
-> ネットワーク名とコンテナ名は適時変更確認して接続してください。
 
 ### Start Repeater
 
@@ -383,7 +383,7 @@ UDP Bridge started. Listening on port 5005...
 > Kafkaとの接続用に `confluent-kafka` を使用していますが、インストールの際にC言語のヘッダファイルが必要になることがあります。
 > 環境によって用意できない場合には `kafka-python-ng` でも接続できます。その際には `bridge-slim.py` を参照してください。
 
-### Start Spark Script (production)
+### Start Spark Script (buffered by Kafka)
 
 - See [`spark/step-3/app_kafka.py`](../docker/spark/step-3/app_kafka.py)
 
@@ -410,11 +410,13 @@ docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh \
 
 ### Launch a simulated IoT device
 
+repeaterコンテナは、ホストの5005(udp)へポートフォワードしているので `host.docker.internal` 宛に通知します。
+
 ```bash
- uv run ./docker/iot/device_sim.py --host repeater
+ uv run ./docker/iot/device_sim.py --host host.docker.internal
 ```
 
-### Verify Cassandra
+### Verify Cassandra (sensor_averages)
 
 データが cassandra に流れ込んでくれば成功です。
 
@@ -433,4 +435,126 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
   sensor_1 | 2026-11-09 07:36:00.000000+0000 |           28.87 | 2026-11-09 07:37:00.000000+0000
   sensor_0 | 2026-11-09 07:35:00.000000+0000 |        25.65905 | 2026-11-09 07:36:00.000000+0000
   sensor_0 | 2026-11-09 07:36:00.000000+0000 |           20.74 | 2026-11-09 07:37:00.000000+0000
+```
+
+## Step 4　Processing of delayed data
+
+ウォーターマーク（Watermark）を導入することで、ネットワーク遅延などで遅れて届いたIoTデータを正しく集計しつつ、メモリ不足（OOM）を防ぐことができます。
+
+### Start Cassandra and Spark Containers for Step 4
+
+- See [`compose.yaml`](../compose.yaml)
+
+```bash
+docker compose up -d
+```
+
+### Create Cassandra Table　(sensor_averages)
+
+Step 2と同じテーブルなので作成済みであればスキップして構いません。
+
+- See [`cassandra/scripts/002_iot_aggregated.cql`](../docker/cassandra/scripts/002_iot_aggregated.cql)
+
+```bash
+docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggregated.cql
+```
+
+### Start Repeater
+
+Step 3 と同じ中継機です。
+
+- See [`repeater/bridge.py`](../docker/repeater/bridge.py)
+
+```bash
+docker exec -it repeater uv run /workspaces/repeater/bridge.py 
+```
+
+### Start Spark Script (watermark)
+
+- See [`spark/step-4/app_watermark.py`](../docker/spark/step-4/app_watermark.py)
+
+```bash
+docker exec -it -u root spark /opt/spark/bin/spark-submit \
+  --master "local[1]" \
+  --driver-memory 512m \
+  --conf spark.sql.shuffle.partitions=2 \
+  --conf spark.cassandra.connection.host=cassandra \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9,com.datastax.spark:spark-cassandra-connector_2.12:3.5.1 \
+  /workspaces/spark/step-4/app_watermark.py
+```
+
+### Run Watermark Test Script
+
+```bash
+uv run ./docker/iot/test_watermark.py --host host.docker.internal
+```
+
+### Verify Cassandra (sensor_averages for Watermark)
+
+```bash
+docker exec -it cassandra cqlsh -k iot_keyspace
+```
+
+```sql
+cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
+  FROM iot_keyspace.sensor_averages
+  WHERE sensor_id = 'sensor_test';
+```
+
+次のような動きになります。
+
+1. ステップ1: 基準時刻の正常データを送信 (気温 20.0℃)
+
+    ```text
+     sensor_id   | window_start                    | window_end                      | avg_temperature
+    -------------+---------------------------------+---------------------------------+-----------------
+     sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              20
+    ```
+
+2. ステップ2: 時間を進めてウォーターマークを少し押し上げる
+
+    ```text
+     sensor_id   | window_start                    | window_end                      | avg_temperature
+    -------------+---------------------------------+---------------------------------+-----------------
+     sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              20
+     sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
+    ```
+
+3. ステップ3: 1分遅れのデータを送信 (許容範囲内: 2分以内)
+
+    気温 100.0℃ を送るので、元の 20.0℃ と平均されて「60.0℃」に更新されるはず！
+
+    ```text
+     sensor_id   | window_start                    | window_end                      | avg_temperature
+    -------------+---------------------------------+---------------------------------+-----------------
+     sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              60
+     sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
+    ```
+
+4. ステップ4: さらに時間を3分進める (ウォーターマークが基準ウィンドウを完全に通り過ぎる)
+
+    ```text
+     sensor_id   | window_start                    | window_end                      | avg_temperature
+    -------------+---------------------------------+---------------------------------+-----------------
+     sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              60
+     sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
+     sensor_test | 2026-11-09 09:25:00.000000+0000 | 2026-11-09 09:26:00.000000+0000 |              30
+    ```
+
+5. ステップ5: 期限切れの遅刻データを送信 (許容範囲外: 2分超過)
+
+    気温 999.0℃ を送るが、破棄されるため平均は「60.0℃」のまま変わらないはず！
+
+    ```text
+     sensor_id   | window_start                    | window_end                      | avg_temperature
+    -------------+---------------------------------+---------------------------------+-----------------
+     sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              60
+     sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
+     sensor_test | 2026-11-09 09:25:00.000000+0000 | 2026-11-09 09:26:00.000000+0000 |              30
+    ```
+
+やり直す場合にはデータを削除して再度送信してください。
+
+```sql
+TRUNCATE TABLE iot_keyspace.sensor_averages;
 ```

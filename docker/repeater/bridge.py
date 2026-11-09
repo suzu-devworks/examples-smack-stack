@@ -1,8 +1,6 @@
 import socket
-from mailbox import Message
 
-from confluent_kafka import Producer  # type: ignore
-from kafka.errors import KafkaError
+from confluent_kafka import KafkaError, Message, Producer  # type: ignore
 
 
 def delivery_report(err: KafkaError, msg: Message) -> None:

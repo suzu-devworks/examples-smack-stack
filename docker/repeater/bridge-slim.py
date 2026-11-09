@@ -1,7 +1,7 @@
 import socket
 
-from kafka import KafkaProducer
-from kafka.producer.future import RecordMetadata
+from kafka import KafkaProducer  # type: ignore
+from kafka.producer.future import RecordMetadata  # type: ignore
 
 
 def on_send_success(record_metadata: RecordMetadata) -> None:
