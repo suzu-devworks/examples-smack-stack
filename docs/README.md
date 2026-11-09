@@ -503,7 +503,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
 
 次のような動きになります。
 
-1. ステップ1: 基準時刻の正常データを送信 (気温 20.0℃)
+1. 基準時刻の正常データを送信 (気温 20.0℃)
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -511,7 +511,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              20
     ```
 
-2. ステップ2: 時間を進めてウォーターマークを少し押し上げる
+2. 時間を進めてウォーターマークを少し押し上げる
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -520,7 +520,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
     ```
 
-3. ステップ3: 1分遅れのデータを送信 (許容範囲内: 2分以内)
+3. 1分遅れのデータを送信 (許容範囲内: 2分以内)
 
     気温 100.0℃ を送るので、元の 20.0℃ と平均されて「60.0℃」に更新されるはず！
 
@@ -531,7 +531,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
     ```
 
-4. ステップ4: さらに時間を3分進める (ウォーターマークが基準ウィンドウを完全に通り過ぎる)
+4. さらに時間を3分進める (ウォーターマークが基準ウィンドウを完全に通り過ぎる)
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -541,7 +541,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:25:00.000000+0000 | 2026-11-09 09:26:00.000000+0000 |              30
     ```
 
-5. ステップ5: 期限切れの遅刻データを送信 (許容範囲外: 2分超過)
+5. 期限切れの遅刻データを送信 (許容範囲外: 2分超過)
 
     気温 999.0℃ を送るが、破棄されるため平均は「60.0℃」のまま変わらないはず！
 
