@@ -260,7 +260,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
 
 ### Start Cassandra and Spark Containers for Step 2
 
-- [See `compose.yaml`](../compose.yaml)
+- See [`compose.yaml`](../compose.yaml)
 
 ```bash
 docker compose up -d
@@ -336,7 +336,7 @@ architecture-beta
 
 ### Start Cassandra and Spark Containers for Step 3
 
-- [See `compose.yaml`](../compose.yaml)
+- See [`compose.yaml`](../compose.yaml)
 
 ```bash
 docker compose up -d
@@ -367,7 +367,7 @@ docker network connect examples-smack-bridge examples-smack-stack_devcontainer-d
 リピーターは、IoTデバイスからのデータを受信し、Kafka に送信する役割を果たします。
 新たなコンテナを作らず　devcontainer でリピーターの代役をやります。
 
-- [See `repeater/bridge.py`](../docker/repeater/bridge.py)
+- See [`repeater/bridge.py`](../docker/repeater/bridge.py)
 
 repeater専用のコンテナを用意しているので次を実行します。
 
