@@ -167,7 +167,7 @@ Type --help for more information.
 
 Scala と Spark のバージョンを確認できたので対応する Cassandra コネクタを指定して接続します。
 
-- [Cassandra Spark Connector](https://mvnrepository.com/artifact/com.datastax.spark/spark-cassandra-connector)
+- [Cassandra Spark Connector - Maven Repository](https://mvnrepository.com/artifact/com.datastax.spark/spark-cassandra-connector)
 
 コネクタを読み込ませるには以下のように実行します：
 
@@ -278,7 +278,7 @@ docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggrega
 
 ### Start Spark Script (aggregator)
 
-- [`spark/step-2/app.py`](../docker/spark/step-2/app.py)
+- See [`spark/step-2/app.py`](../docker/spark/step-2/app.py)
 
 ```bash
 docker exec -it -u root spark /opt/spark/bin/spark-submit \
@@ -385,7 +385,7 @@ UDP Bridge started. Listening on port 5005...
 
 ### Start Spark Script (production)
 
-- [`spark/step-3/app_kafka.py`](../docker/spark/step-3/app_kafka.py)
+- See [`spark/step-3/app_kafka.py`](../docker/spark/step-3/app_kafka.py)
 
 ```bash
 docker exec -it -u root spark /opt/spark/bin/spark-submit \
