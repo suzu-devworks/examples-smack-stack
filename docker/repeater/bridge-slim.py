@@ -1,7 +1,13 @@
+import argparse
 import socket
 
 from kafka import KafkaProducer  # type: ignore
 from kafka.producer.future import RecordMetadata  # type: ignore
+
+parser = argparse.ArgumentParser(description="bridge for UDP to Kafka")
+parser.add_argument("--host", default="127.0.0.1", help="Listening host for UDP traffic (default: 127.0.0.1)")
+parser.add_argument("--port", type=int, default=5005, help="Listening port for UDP traffic (default: 5005)")
+args = parser.parse_args()
 
 
 def on_send_success(record_metadata: RecordMetadata) -> None:
@@ -23,12 +29,9 @@ producer = KafkaProducer(bootstrap_servers=["kafka:9092"], request_timeout_ms=50
 topic_name = "iot-topic"
 
 # UDPソケットの設定
-UDP_IP = "0.0.0.0"
-UDP_PORT = 5005
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((UDP_IP, UDP_PORT))
-
-print(f"UDP Bridge started. Listening on port {UDP_PORT}...")
+sock.bind((args.host, args.port))
+print(f"UDP Bridge started. Listening on {args.host}:{args.port} ...")
 
 while True:
     data, addr = sock.recvfrom(1024)

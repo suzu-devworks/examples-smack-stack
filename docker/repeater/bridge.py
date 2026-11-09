@@ -1,6 +1,12 @@
+import argparse
 import socket
 
 from confluent_kafka import KafkaError, Message, Producer  # type: ignore
+
+parser = argparse.ArgumentParser(description="bridge for UDP to Kafka")
+parser.add_argument("--host", default="127.0.0.1", help="Listening host for UDP traffic (default: 127.0.0.1)")
+parser.add_argument("--port", type=int, default=5005, help="Listening port for UDP traffic (default: 5005)")
+args = parser.parse_args()
 
 
 def delivery_report(err: KafkaError, msg: Message) -> None:
@@ -27,13 +33,10 @@ producer = Producer(producer_config)
 
 topic_name = "iot-topic"
 
-# UDPソケットの設定 (ポート 5005番で待ち受け)
-UDP_IP = "0.0.0.0"
-UDP_PORT = 5005
+# UDPソケットの設定
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((UDP_IP, UDP_PORT))
-
-print(f"UDP Bridge started. Listening on port {UDP_PORT}...")
+sock.bind((args.host, args.port))
+print(f"UDP Bridge started. Listening on {args.host}:{args.port} ...")
 
 while True:
     # UDPデータの受信 (例: "sensor_1,25.4" のようなCSV形式のテキスト)

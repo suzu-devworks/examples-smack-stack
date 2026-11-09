@@ -372,7 +372,7 @@ docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/002_iot_aggrega
 repeater専用のコンテナを用意しているので次を実行します。
 
 ```bash
-docker exec -it repeater uv run /workspaces/repeater/bridge.py 
+docker exec -it repeater uv run /workspaces/repeater/bridge.py --host 0.0.0.0
 ```
 
 ```console
@@ -466,7 +466,7 @@ Step 3 と同じ中継機です。
 - See [`repeater/bridge.py`](../docker/repeater/bridge.py)
 
 ```bash
-docker exec -it repeater uv run /workspaces/repeater/bridge.py 
+docker exec -it repeater uv run /workspaces/repeater/bridge.py --host 0.0.0.0
 ```
 
 ### Start Spark Script (watermark)
