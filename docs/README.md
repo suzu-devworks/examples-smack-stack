@@ -11,18 +11,18 @@
   - [From Spark to Cassandra （Spark Streaming）](#from-spark-to-cassandra-spark-streaming)
   - [From Cassandra to Spark （Spark SQL）](#from-cassandra-to-spark-spark-sql)
 - [Apache Kafka](#apache-kafka)
-- [Step 1: Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
+- [Step 1 Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
   - [Start Containers for Step 1](#start-containers-for-step-1)
   - [Create Cassandra Table　(sensor\_logs)](#create-cassandra-tablesensor_logs)
   - [Verify the connection from Spark](#verify-the-connection-from-spark)
   - [Start Spark Script (simulation)](#start-spark-script-simulation)
   - [Verify Cassandra (sensor\_logs)](#verify-cassandra-sensor_logs)
-- [Step 2: Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
+- [Step 2 Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
   - [Start Containers for Step 2](#start-containers-for-step-2)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages)
   - [Start Spark Script (aggregator)](#start-spark-script-aggregator)
   - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages)
-- [Step 3　　Incorporate Kafka as a buffer for IoT data ingestion](#step-3incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
+- [Step 3 Incorporate Kafka as a buffer for IoT data ingestion](#step-3-incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
   - [Start Containers for Step 3](#start-containers-for-step-3)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-1)
   - [Start Repeater](#start-repeater)
@@ -30,7 +30,7 @@
   - [(optional) Kafka Console Consumer](#optional-kafka-console-consumer)
   - [Launch a simulated IoT device](#launch-a-simulated-iot-device)
   - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages-1)
-- [Step 4　Processing of delayed data](#step-4processing-of-delayed-data)
+- [Step 4 Processing of delayed data](#step-4-processing-of-delayed-data)
   - [Start Cassandra and Spark Containers for Step 4](#start-cassandra-and-spark-containers-for-step-4)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-2)
   - [Start Repeater](#start-repeater-1)
@@ -42,6 +42,9 @@
   - [Create Cassandra Table (sensor\_metrics\_summary)](#create-cassandra-table-sensor_metrics_summary)
   - [Start Spark Batch Script (Aggregation \& Write-Back)](#start-spark-batch-script-aggregation--write-back)
   - [Verify Cassandra (sensor\_summaries)](#verify-cassandra-sensor_summaries)
+- [Step 6 Visualization and advanced analysis using Jupyter Notebook](#step-6-visualization-and-advanced-analysis-using-jupyter-notebook)
+  - [Start Containers for Step 6](#start-containers-for-step-6)
+  - [Access Jupyter Notebook](#access-jupyter-notebook)
 
 ## Overview
 
@@ -107,7 +110,7 @@ Cassandra単体では、複雑な条件での集計や結合（JOIN）、全件�
 - データの取りこぼしを防ぐ： Spark Streamingの処理（マイクロバッチなど）が一瞬詰まった際、UDPはデータを投げっぱなしにするため、データが消滅してしまいます。
 - バッファの役割： 受信専用の軽量なサーバー（Node.jsやGo、Embulkなど）で一度UDPを受け、すぐに Apache Kafka や AWS Kinesis などのメッセージキュー（ブローカー）に安全に放り込みます。Sparkはそのキューからデータを確実に吸い上げます。
 
-## Step 1: Real-time log accumulation system for pseudo IoT sensors
+## Step 1 Real-time log accumulation system for pseudo IoT sensors
 
 > 擬似的な IoT センサーからのログをリアルタイムに蓄積するシステムを構築するケースを考えます。
 
@@ -267,7 +270,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
   sensor_0 |      OK |    27.36492 | 2026-11-07 09:18:08.895000+0000
 ```
 
-## Step 2: Perform more advanced aggregation
+## Step 2 Perform more advanced aggregation
 
 > window 関数を使い、「1分間の枠（固定ウィンドウ）」でグループ化して平均値を計算します。
 
@@ -324,7 +327,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
   sensor_0 | 2026-11-09 05:26:00.000000+0000 |        25.70184 | 2026-11-09 05:27:00.000000+0000
 ```
 
-## Step 3　　Incorporate Kafka as a buffer for IoT data ingestion
+## Step 3 Incorporate Kafka as a buffer for IoT data ingestion
 
 > IoTデータ取り込みのバッファとしてKafkaを組み込む
 
@@ -442,7 +445,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
   sensor_0 | 2026-11-09 07:36:00.000000+0000 |           20.74 | 2026-11-09 07:37:00.000000+0000
 ```
 
-## Step 4　Processing of delayed data
+## Step 4 Processing of delayed data
 
 ウォーターマーク（Watermark）を導入することで、ネットワーク遅延などで遅れて届いたIoTデータを正しく集計しつつ、メモリ不足（OOM）を防ぐことができます。
 
@@ -630,4 +633,32 @@ WHERE sensor_id = 'sensor_0'
   sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |    p95_temperature |     29.30386
   sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 | stddev_temperature |      2.82859
   sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |        total_count |          209
+```
+
+## Step 6 Visualization and advanced analysis using Jupyter Notebook
+
+> 最後の仕上げとして、Jupyter Notebook環境からSparkを経由してデータにアクセスし視覚的な分析を行います。
+
+### Start Containers for Step 6
+
+Jupyter Notebookコンテナを起動します。
+
+- See [`compose.yaml`](../compose.yaml)
+
+```bash
+ docker compose --profile analysis up -d
+```
+
+> `--profile analysis` オプションを付けて、Jupyter Notebookコンテナを起動します。
+
+### Access Jupyter Notebook
+
+Jupyter Notebookコンテナが起動したら、ブラウザから以下のURLにアクセスします。
+
+- <http://localhost:8888>
+
+初回アクセス時には、トークンの入力が求められます。トークンはコンテナのログから確認できます。
+
+```bash
+docker logs <jupyter_container_name>
 ```

@@ -3,17 +3,19 @@ name: CI (docker compose config & python)
 on:
   push:
     branches:
-      - "main"
+      - 'main'
     paths:
-      - "docker/**/*.py"
-      - "docker/**/Dockerfile"
-      - "compose.yaml"
+      - 'docker/**/*.py'
+      - 'docker/**/*.ipynb'
+      - 'docker/**/Dockerfile'
+      - 'compose.yaml'
   pull_request:
     paths:
-      - "docker/**/*.py"
-      - "docker/**/Dockerfile"
-      - "compose.yaml"
-      - ".github/workflows/ci.yaml"
+      - 'docker/**/*.py'
+      - 'docker/**/*.ipynb'
+      - 'docker/**/Dockerfile'
+      - 'compose.yaml'
+      - '.github/workflows/ci.yaml'
   workflow_dispatch:
 
 permissions: {}
@@ -74,12 +76,12 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: 'uv.lock'
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version-file: "pyproject.toml"
+          python-version-file: 'pyproject.toml'
 
       - name: Install dependencies
         run: uv sync --all-packages --all-extras
