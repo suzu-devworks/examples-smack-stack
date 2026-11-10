@@ -25,3 +25,6 @@ echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
 # echo 'eval (uvx --generate-shell-completion elvish | slurp)' >> ~/.elvish/rc.elv
 
 uv self update
+
+# Install GitHub CLI extension for actions lock
+gh extension install github/gh-actions-lock

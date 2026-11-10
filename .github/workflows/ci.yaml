@@ -1,0 +1,90 @@
+name: CI (docker compose config & python)
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "docker/**/*.py"
+      - "docker/**/Dockerfile"
+      - "compose.yaml"
+  pull_request:
+    paths:
+      - "docker/**/*.py"
+      - "docker/**/Dockerfile"
+      - "compose.yaml"
+      - ".github/workflows/ci.yaml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      docker: ${{ steps.changes.outputs.docker }}
+      python: ${{ steps.changes.outputs.python }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            docker:
+              - 'compose.yaml'
+              - 'docker/**/Dockerfile'
+            python:
+              - 'docker/**/*.py'
+
+  run-docker-check:
+    needs: start
+    if: needs.filter.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docker files changed."
+      - uses: actions/checkout@v7
+
+      - name: Docker compose config check
+        run: docker compose config --quiet
+
+      - name: Docker compose Dockerfile syntax check
+        run: docker compose build --check
+
+      - name: Docker compose build check
+        run: docker compose build --no-cache
+
+  run-python-check:
+    needs: start
+    if: needs.filter.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Python files changed."
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync --all-packages --all-extras
+
+      - name: Lint with ruff
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          src: ./docker
