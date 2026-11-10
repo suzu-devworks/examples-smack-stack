@@ -5,15 +5,11 @@ on:
     branches:
       - 'main'
     paths:
-      - 'docker/**/*.py'
-      - 'docker/**/*.ipynb'
-      - 'docker/**/Dockerfile'
+      - 'docker/**/*'
       - 'compose.yaml'
   pull_request:
     paths:
-      - 'docker/**/*.py'
-      - 'docker/**/*.ipynb'
-      - 'docker/**/Dockerfile'
+      - 'docker/**/*'
       - 'compose.yaml'
       - '.github/workflows/ci.yaml'
   workflow_dispatch:
@@ -50,7 +46,7 @@ jobs:
 
   run-docker-check:
     needs: start
-    if: needs.filter.outputs.docker == 'true'
+    if: needs.start.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - run: echo "Docker files changed."
@@ -67,7 +63,7 @@ jobs:
 
   run-python-check:
     needs: start
-    if: needs.filter.outputs.python == 'true'
+    if: needs.start.outputs.python == 'true'
     runs-on: ubuntu-latest
     steps:
       - run: echo "Python files changed."
