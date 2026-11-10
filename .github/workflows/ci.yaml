@@ -46,6 +46,7 @@ jobs:
               - 'docker/**/Dockerfile'
             python:
               - 'docker/**/*.py'
+              - 'docker/**/*.ipynb'
 
   run-docker-check:
     needs: start
