@@ -660,5 +660,5 @@ Jupyter Notebookコンテナが起動したら、ブラウザから以下のURL�
 初回アクセス時には、トークンの入力が求められます。トークンはコンテナのログから確認できます。
 
 ```bash
-docker logs <jupyter_container_name>
+docker logs jupyter
 ```
