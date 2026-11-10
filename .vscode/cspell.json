@@ -22,13 +22,19 @@
     "DGRAM",
     "Embulk",
     "errback",
+    "figsize",
     "healthcheck",
+    "jovyan",
     "KEYSPACE",
     "Mesos",
     "NEWSIZE",
     "pyproject",
     "pyspark",
-    "venv"
+    "stddev",
+    "venv",
+    "xlabel",
+    "xticks",
+    "ylabel"
   ],
   "ignoreWords": [],
   "import": []

@@ -88,6 +88,18 @@ services:
       - ${LOCAL_WORKSPACE_FOLDER}/docker/repeater:/workspaces/repeater:ro
     command: tail -f /dev/null
 
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: jupyter
+    profiles:
+      - analysis  # 自動起動させないためのプロファイル名
+    networks:
+      - interconnect
+    ports:
+      - "8888:8888"
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER}/docker/jupyter:/home/jovyan/work:rw
+
 volumes:
   cassandra-data:
 

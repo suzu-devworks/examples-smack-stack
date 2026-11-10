@@ -18,6 +18,18 @@ updates:
         patterns:
           - '*'
 
+  # 2. GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+    groups:
+      actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
   # 4. Python (uv / pip)
   - package-ecosystem: 'pip'
     directory: '/'

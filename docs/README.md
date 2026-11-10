@@ -11,18 +11,18 @@
   - [From Spark to Cassandra （Spark Streaming）](#from-spark-to-cassandra-spark-streaming)
   - [From Cassandra to Spark （Spark SQL）](#from-cassandra-to-spark-spark-sql)
 - [Apache Kafka](#apache-kafka)
-- [Step 1: Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
+- [Step 1 Real-time log accumulation system for pseudo IoT sensors](#step-1-real-time-log-accumulation-system-for-pseudo-iot-sensors)
   - [Start Containers for Step 1](#start-containers-for-step-1)
   - [Create Cassandra Table　(sensor\_logs)](#create-cassandra-tablesensor_logs)
   - [Verify the connection from Spark](#verify-the-connection-from-spark)
   - [Start Spark Script (simulation)](#start-spark-script-simulation)
   - [Verify Cassandra (sensor\_logs)](#verify-cassandra-sensor_logs)
-- [Step 2: Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
+- [Step 2 Perform more advanced aggregation](#step-2-perform-more-advanced-aggregation)
   - [Start Containers for Step 2](#start-containers-for-step-2)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages)
   - [Start Spark Script (aggregator)](#start-spark-script-aggregator)
   - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages)
-- [Step 3　　Incorporate Kafka as a buffer for IoT data ingestion](#step-3incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
+- [Step 3 Incorporate Kafka as a buffer for IoT data ingestion](#step-3-incorporate-kafka-as-a-buffer-for-iot-data-ingestion)
   - [Start Containers for Step 3](#start-containers-for-step-3)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-1)
   - [Start Repeater](#start-repeater)
@@ -30,13 +30,21 @@
   - [(optional) Kafka Console Consumer](#optional-kafka-console-consumer)
   - [Launch a simulated IoT device](#launch-a-simulated-iot-device)
   - [Verify Cassandra (sensor\_averages)](#verify-cassandra-sensor_averages-1)
-- [Step 4　Processing of delayed data](#step-4processing-of-delayed-data)
+- [Step 4 Processing of delayed data](#step-4-processing-of-delayed-data)
   - [Start Cassandra and Spark Containers for Step 4](#start-cassandra-and-spark-containers-for-step-4)
   - [Create Cassandra Table　(sensor\_averages)](#create-cassandra-tablesensor_averages-2)
   - [Start Repeater](#start-repeater-1)
   - [Start Spark Script (watermark)](#start-spark-script-watermark)
   - [Run Watermark Test Script](#run-watermark-test-script)
   - [Verify Cassandra (sensor\_averages for Watermark)](#verify-cassandra-sensor_averages-for-watermark)
+- [Step 5 Batch analytics and write-back using Spark SQL](#step-5-batch-analytics-and-write-back-using-spark-sql)
+  - [Start Containers for Step 5](#start-containers-for-step-5)
+  - [Create Cassandra Table (sensor\_metrics\_summary)](#create-cassandra-table-sensor_metrics_summary)
+  - [Start Spark Batch Script (Aggregation \& Write-Back)](#start-spark-batch-script-aggregation--write-back)
+  - [Verify Cassandra (sensor\_summaries)](#verify-cassandra-sensor_summaries)
+- [Step 6 Visualization and advanced analysis using Jupyter Notebook](#step-6-visualization-and-advanced-analysis-using-jupyter-notebook)
+  - [Start Containers for Step 6](#start-containers-for-step-6)
+  - [Access Jupyter Notebook](#access-jupyter-notebook)
 
 ## Overview
 
@@ -102,7 +110,7 @@ Cassandra単体では、複雑な条件での集計や結合（JOIN）、全件�
 - データの取りこぼしを防ぐ： Spark Streamingの処理（マイクロバッチなど）が一瞬詰まった際、UDPはデータを投げっぱなしにするため、データが消滅してしまいます。
 - バッファの役割： 受信専用の軽量なサーバー（Node.jsやGo、Embulkなど）で一度UDPを受け、すぐに Apache Kafka や AWS Kinesis などのメッセージキュー（ブローカー）に安全に放り込みます。Sparkはそのキューからデータを確実に吸い上げます。
 
-## Step 1: Real-time log accumulation system for pseudo IoT sensors
+## Step 1 Real-time log accumulation system for pseudo IoT sensors
 
 > 擬似的な IoT センサーからのログをリアルタイムに蓄積するシステムを構築するケースを考えます。
 
@@ -114,7 +122,7 @@ architecture-beta
         service cassandra(database)[Cassandra] in backend
     
     device:R --> L:spark
-    spark:B --> T:cassandra
+    spark:R --> L:cassandra
 ```
 
 ### Start Containers for Step 1
@@ -262,7 +270,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_logs;
   sensor_0 |      OK |    27.36492 | 2026-11-07 09:18:08.895000+0000
 ```
 
-## Step 2: Perform more advanced aggregation
+## Step 2 Perform more advanced aggregation
 
 > window 関数を使い、「1分間の枠（固定ウィンドウ）」でグループ化して平均値を計算します。
 
@@ -319,7 +327,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
   sensor_0 | 2026-11-09 05:26:00.000000+0000 |        25.70184 | 2026-11-09 05:27:00.000000+0000
 ```
 
-## Step 3　　Incorporate Kafka as a buffer for IoT data ingestion
+## Step 3 Incorporate Kafka as a buffer for IoT data ingestion
 
 > IoTデータ取り込みのバッファとしてKafkaを組み込む
 
@@ -336,10 +344,10 @@ architecture-beta
         service spark(server)[Spark] in backend
         service cassandra(database)[Cassandra] in backend
     
-    device:R --> L:repeater
-    repeater:R --> L:kafka
+    device:B --> T:repeater
+    repeater:B --> T:kafka
     kafka:R --> L:spark
-    spark:B --> T:cassandra
+    spark:R --> L:cassandra
 ```
   
 一連のパイプラインをローカル環境で動かすための設定手順とPythonコードをまとめました。
@@ -437,7 +445,7 @@ cqlsh:iot_keyspace> SELECT * FROM sensor_averages LIMIT 10;
   sensor_0 | 2026-11-09 07:36:00.000000+0000 |           20.74 | 2026-11-09 07:37:00.000000+0000
 ```
 
-## Step 4　Processing of delayed data
+## Step 4 Processing of delayed data
 
 ウォーターマーク（Watermark）を導入することで、ネットワーク遅延などで遅れて届いたIoTデータを正しく集計しつつ、メモリ不足（OOM）を防ぐことができます。
 
@@ -503,7 +511,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
 
 次のような動きになります。
 
-1. ステップ1: 基準時刻の正常データを送信 (気温 20.0℃)
+1. 基準時刻の正常データを送信 (気温 20.0℃)
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -511,7 +519,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:21:00.000000+0000 | 2026-11-09 09:22:00.000000+0000 |              20
     ```
 
-2. ステップ2: 時間を進めてウォーターマークを少し押し上げる
+2. 時間を進めてウォーターマークを少し押し上げる
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -520,7 +528,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
     ```
 
-3. ステップ3: 1分遅れのデータを送信 (許容範囲内: 2分以内)
+3. 1分遅れのデータを送信 (許容範囲内: 2分以内)
 
     気温 100.0℃ を送るので、元の 20.0℃ と平均されて「60.0℃」に更新されるはず！
 
@@ -531,7 +539,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:22:00.000000+0000 | 2026-11-09 09:23:00.000000+0000 |              25
     ```
 
-4. ステップ4: さらに時間を3分進める (ウォーターマークが基準ウィンドウを完全に通り過ぎる)
+4. さらに時間を3分進める (ウォーターマークが基準ウィンドウを完全に通り過ぎる)
 
     ```text
      sensor_id   | window_start                    | window_end                      | avg_temperature
@@ -541,7 +549,7 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
      sensor_test | 2026-11-09 09:25:00.000000+0000 | 2026-11-09 09:26:00.000000+0000 |              30
     ```
 
-5. ステップ5: 期限切れの遅刻データを送信 (許容範囲外: 2分超過)
+5. 期限切れの遅刻データを送信 (許容範囲外: 2分超過)
 
     気温 999.0℃ を送るが、破棄されるため平均は「60.0℃」のまま変わらないはず！
 
@@ -557,4 +565,100 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
 
 ```sql
 TRUNCATE TABLE iot_keyspace.sensor_averages;
+```
+
+## Step 5 Batch analytics and write-back using Spark SQL
+
+> Cassandraに蓄積された生ログ（sensor_logs）をSparkで一括読み込みし、Spark SQLを使ってセンサーごとの高度な統計集計（最大・最小・平均気温、総データ件数など）を行った後、集計結果専用のCassandraテーブル（sensor_summary）に書き戻します。
+
+```mermaid
+architecture-beta
+    group backend(cloud)[Data Infrastructure]
+        service cassandra_in(database)[Cassandra (sensor_logs)] in backend
+        service spark_sql(server)[Spark SQL (Batch)] in backend
+        service cassandra_out(database)[Cassandra (sensor_summary)] in backend
+    
+    cassandra_in:R --> L:spark_sql
+    spark_sql:R --> L:cassandra_out
+```
+
+> [!WARNING]
+> Step1 の動作で収集したデータが必要です。Cassandra の `sensor_logs` テーブルにデータが存在することを確認してください。
+
+### Start Containers for Step 5
+
+- See [`compose.yaml`](../compose.yaml)
+
+```bash
+docker compose up -d
+```
+
+### Create Cassandra Table (sensor_metrics_summary)
+
+- See [`cassandra/scripts/003_iot_metrics_summary.cql`](../docker/cassandra/scripts/003_iot_metrics_summary.cql)
+
+```bash
+docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/003_iot_metrics_summary.cql
+```
+
+### Start Spark Batch Script (Aggregation & Write-Back)
+
+- See [`spark/step-5/app_metrics_advanced.py`](../docker/spark/step-5/app_metrics_advanced.py)
+
+```bash
+docker exec -it -u root spark /opt/spark/bin/spark-submit \
+  --master "local[1]" \
+  --driver-memory 512m \
+  --conf spark.sql.shuffle.partitions=2 \
+  --conf spark.cassandra.connection.host=cassandra \
+  --packages com.datastax.spark:spark-cassandra-connector_2.12:3.5.1 \
+  /workspaces/spark/step-5/app_metrics_advanced.py
+```
+
+### Verify Cassandra (sensor_summaries)
+
+```bash
+docker exec -it cassandra cqlsh -k iot_keyspace
+```
+
+```sql
+cqlsh:iot_keyspace> SELECT * FROM sensor_metrics_summary 
+WHERE sensor_id = 'sensor_0' 
+  AND period_type = 'hourly';
+
+ sensor_id | period_type | window_start                    | metric_name        | metric_value
+-----------+-------------+---------------------------------+--------------------+--------------
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |    avg_temperature |      25.0081
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 | median_temperature |     25.11675
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |    p95_temperature |     29.30386
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 | stddev_temperature |      2.82859
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |        total_count |          209
+```
+
+## Step 6 Visualization and advanced analysis using Jupyter Notebook
+
+> 最後の仕上げとして、Jupyter Notebook環境からSparkを経由してデータにアクセスし視覚的な分析を行います。
+
+### Start Containers for Step 6
+
+Jupyter Notebookコンテナを起動します。
+
+- See [`compose.yaml`](../compose.yaml)
+
+```bash
+ docker compose --profile analysis up -d
+```
+
+> `--profile analysis` オプションを付けて、Jupyter Notebookコンテナを起動します。
+
+### Access Jupyter Notebook
+
+Jupyter Notebookコンテナが起動したら、ブラウザから以下のURLにアクセスします。
+
+- <http://localhost:8888>
+
+初回アクセス時には、トークンの入力が求められます。トークンはコンテナのログから確認できます。
+
+```bash
+docker logs <jupyter_container_name>
 ```
