@@ -28,6 +28,7 @@
     "NEWSIZE",
     "pyproject",
     "pyspark",
+    "stddev",
     "venv"
   ],
   "ignoreWords": [],

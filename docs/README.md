@@ -37,6 +37,11 @@
   - [Start Spark Script (watermark)](#start-spark-script-watermark)
   - [Run Watermark Test Script](#run-watermark-test-script)
   - [Verify Cassandra (sensor\_averages for Watermark)](#verify-cassandra-sensor_averages-for-watermark)
+- [Step 5 Batch analytics and write-back using Spark SQL](#step-5-batch-analytics-and-write-back-using-spark-sql)
+  - [Start Containers for Step 5](#start-containers-for-step-5)
+  - [Create Cassandra Table (sensor\_metrics\_summary)](#create-cassandra-table-sensor_metrics_summary)
+  - [Start Spark Batch Script (Aggregation \& Write-Back)](#start-spark-batch-script-aggregation--write-back)
+  - [Verify Cassandra (sensor\_summaries)](#verify-cassandra-sensor_summaries)
 
 ## Overview
 
@@ -557,4 +562,72 @@ cqlsh:iot_keyspace> SELECT sensor_id, window_start, window_end, avg_temperature
 
 ```sql
 TRUNCATE TABLE iot_keyspace.sensor_averages;
+```
+
+## Step 5 Batch analytics and write-back using Spark SQL
+
+> Cassandraに蓄積された生ログ（sensor_logs）をSparkで一括読み込みし、Spark SQLを使ってセンサーごとの高度な統計集計（最大・最小・平均気温、総データ件数など）を行った後、集計結果専用のCassandraテーブル（sensor_summary）に書き戻します。
+
+```mermaid
+architecture-beta
+    group backend(cloud)[Data Infrastructure]
+        service cassandra_in(database)[Cassandra (sensor_logs)] in backend
+        service spark_sql(server)[Spark SQL (Batch)] in backend
+        service cassandra_out(database)[Cassandra (sensor_summary)] in backend
+    
+    cassandra_in:R --> L:spark_sql
+    spark_sql:R --> L:cassandra_out
+```
+
+> [!WARNING]
+> Step1 の動作で収集したデータが必要です。Cassandra の `sensor_logs` テーブルにデータが存在することを確認してください。
+
+### Start Containers for Step 5
+
+- See [`compose.yaml`](../compose.yaml)
+
+```bash
+docker compose up -d
+```
+
+### Create Cassandra Table (sensor_metrics_summary)
+
+- See [`cassandra/scripts/003_iot_metrics_summary.cql`](../docker/cassandra/scripts/003_iot_metrics_summary.cql)
+
+```bash
+docker exec -it cassandra cqlsh -f /workspaces/cassandra/scripts/003_iot_metrics_summary.cql
+```
+
+### Start Spark Batch Script (Aggregation & Write-Back)
+
+- See [`spark/step-5/app_metrics_advanced.py`](../docker/spark/step-5/app_metrics_advanced.py)
+
+```bash
+docker exec -it -u root spark /opt/spark/bin/spark-submit \
+  --master "local[1]" \
+  --driver-memory 512m \
+  --conf spark.sql.shuffle.partitions=2 \
+  --conf spark.cassandra.connection.host=cassandra \
+  --packages com.datastax.spark:spark-cassandra-connector_2.12:3.5.1 \
+  /workspaces/spark/step-5/app_metrics_advanced.py
+```
+
+### Verify Cassandra (sensor_summaries)
+
+```bash
+docker exec -it cassandra cqlsh -k iot_keyspace
+```
+
+```sql
+cqlsh:iot_keyspace> SELECT * FROM sensor_metrics_summary 
+WHERE sensor_id = 'sensor_0' 
+  AND period_type = 'hourly';
+
+ sensor_id | period_type | window_start                    | metric_name        | metric_value
+-----------+-------------+---------------------------------+--------------------+--------------
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |    avg_temperature |      25.0081
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 | median_temperature |     25.11675
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |    p95_temperature |     29.30386
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 | stddev_temperature |      2.82859
+  sensor_0 |      hourly | 2026-11-10 07:00:00.000000+0000 |        total_count |          209
 ```
