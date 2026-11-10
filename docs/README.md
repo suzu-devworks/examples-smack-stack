@@ -119,7 +119,7 @@ architecture-beta
         service cassandra(database)[Cassandra] in backend
     
     device:R --> L:spark
-    spark:B --> T:cassandra
+    spark:R --> L:cassandra
 ```
 
 ### Start Containers for Step 1
@@ -341,10 +341,10 @@ architecture-beta
         service spark(server)[Spark] in backend
         service cassandra(database)[Cassandra] in backend
     
-    device:R --> L:repeater
-    repeater:R --> L:kafka
+    device:B --> T:repeater
+    repeater:B --> T:kafka
     kafka:R --> L:spark
-    spark:B --> T:cassandra
+    spark:R --> L:cassandra
 ```
   
 一連のパイプラインをローカル環境で動かすための設定手順とPythonコードをまとめました。
