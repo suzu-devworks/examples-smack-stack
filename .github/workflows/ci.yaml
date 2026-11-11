@@ -39,7 +39,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   start:
-    needs: verify-locks
+    needs: verify-lock
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
