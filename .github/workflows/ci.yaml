@@ -1,4 +1,4 @@
-name: CI (docker compose config & python)
+name: CI
 
 on:
   push:
