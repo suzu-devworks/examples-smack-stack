@@ -21,7 +21,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install actions-lock extension
+        run: gh extension install github/gh-actions-lock
+
+      - name: Verify actions-lock
+        run: gh actions-lock --verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   start:
+    needs: verify-lock
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
